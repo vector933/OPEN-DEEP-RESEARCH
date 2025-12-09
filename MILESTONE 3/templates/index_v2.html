@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Research Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style_v2.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>🔍 Research</h2>
+                <button class="btn-icon" id="newChatBtn" title="New Chat">
+                    <span>+</span>
+                </button>
+            </div>
+
+            <div class="chat-list" id="chatList">
+                <!-- Chat items will be inserted here -->
+            </div>
+
+
+
+            <div class="sidebar-footer">
+                <button class="theme-toggle" id="themeToggle">
+                    <span class="theme-icon">🌙</span>
+                    <span class="theme-text">Dark Mode</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="chat-header" id="chatHeader">
+                <div class="chat-title-container">
+                    <h1 class="chat-title" id="chatTitle">New Research</h1>
+                    <button class="btn-icon btn-edit" id="editTitleBtn" title="Rename">✏️</button>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-icon" id="deleteChatBtn" title="Delete Chat">🗑️</button>
+                    <button class="btn-icon" id="toggleSidebarBtn" title="Toggle Sidebar">☰</button>
+                </div>
+            </header>
+
+            <!-- Messages Area -->
+            <div class="messages-container" id="messagesContainer">
+                <!-- Welcome Screen -->
+                <div class="welcome-screen" id="welcomeScreen">
+                    <div class="welcome-content">
+                        <h1>🔍 AI Research Assistant</h1>
+                        <p>Search academic papers and get comprehensive reports with citations</p>
+                        <div class="feature-grid">
+                            <div class="feature-card">
+                                <span class="feature-icon">📚</span>
+                                <h3>Academic Papers</h3>
+                                <p>Searches Semantic Scholar & arXiv</p>
+                            </div>
+                            <div class="feature-card">
+                                <span class="feature-icon">📝</span>
+                                <h3>Proper Citations</h3>
+                                <p>APA format with references</p>
+                            </div>
+                            <div class="feature-card">
+                                <span class="feature-icon">💬</span>
+                                <h3>Chat History</h3>
+                                <p>Save and manage your research</p>
+                            </div>
+                        </div>
+
+                        <!-- Example Queries -->
+                        <div class="examples">
+                            <p class="examples-title">Try these examples:</p>
+                            <div class="example-chips">
+                                <button class="chip"
+                                    onclick="setExampleQuery('What are the latest breakthroughs in quantum computing in 2024?')">
+                                    Quantum Computing 2024
+                                </button>
+                                <button class="chip"
+                                    onclick="setExampleQuery('How is climate change affecting global food security?')">
+                                    Climate & Food Security
+                                </button>
+                                <button class="chip"
+                                    onclick="setExampleQuery('What are the recent advances in CRISPR gene editing?')">
+                                    CRISPR Gene Editing
+                                </button>
+                                <button class="chip"
+                                    onclick="setExampleQuery('What are transformer models in natural language processing?')">
+                                    Transformer Models NLP
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages will be inserted here -->
+                <div class="messages" id="messages"></div>
+
+                <!-- Loading Indicator -->
+                <div class="loading-message hidden" id="loadingMessage">
+                    <div class="spinner"></div>
+                    <p>Researching academic papers...</p>
+                    <small>This may take 30-60 seconds</small>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area">
+                <form id="researchForm" class="input-form">
+                    <button type="button" class="btn-attach" id="uploadBtn" title="Upload Document">
+                        📎
+                    </button>
+                    <input type="file" id="fileInput" accept=".pdf,.txt,.docx" hidden>
+                    <textarea id="queryInput" placeholder="Ask a research question or upload a document..." rows="1"
+                        required></textarea>
+                    <button type="submit" class="btn-send" id="sendBtn">
+                        <span id="sendIcon">→</span>
+                        <span id="stopIcon" style="display: none;">⬛</span>
+                    </button>
+                </form>
+                <!-- Document List Popup -->
+                <div class="document-popup hidden" id="documentPopup">
+                    <div class="document-popup-header">
+                        <span>📄 Uploaded Documents</span>
+                        <button type="button" class="btn-close" id="closeDocPopup">×</button>
+                    </div>
+                    <div class="document-list" id="documentList">
+                        <!-- Documents will appear here -->
+                    </div>
+                </div>
+                <div class="input-footer">
+                    <small>Powered by Groq AI (Llama 3.3 70B) • Academic paper search</small>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='script_v2.js') }}"></script>
+</body>
+
+</html>

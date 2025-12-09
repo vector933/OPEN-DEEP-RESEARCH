@@ -1,0 +1,33 @@
+# Python dependencies for Multi-Agent Research System
+
+# Core dependencies
+langchain-core>=0.3.0
+langchain>=0.3.0
+langgraph>=0.2.0
+langchain-groq>=0.2.0
+pydantic>=2.0.0
+python-dotenv>=1.0.0
+
+# Web search - Academic papers
+feedparser>=6.0.0
+
+# Web scraping for additional sources
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+
+# Web interface
+flask>=3.0.0
+markdown>=3.5.0
+
+# Document processing
+PyPDF2>=3.0.0
+python-docx>=1.0.0
+python-magic-bin>=0.4.14
+
+# Optional: Alternative LLM providers
+# langchain-openai>=0.2.0
+# langchain-anthropic>=0.2.0
+# langchain-google-genai>=2.0.0
+
+# Optional: For better output formatting
+rich>=13.0.0

@@ -91,6 +91,3 @@ print("\n--- AI Research Assistant End ---")
 
 
 
-#     $env:GEMINI_API_KEY="AIzaSyDLhwQiy5pzxUXj_-7xhD3w7jwXZxyrW9I"
-
-#     python AIResearchAgent.py

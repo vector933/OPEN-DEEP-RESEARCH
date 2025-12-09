@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Research Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>🔍 AI Research Assistant</h1>
+                <p class="subtitle">Powered by Multi-Agent AI System</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Search Section -->
+            <div class="search-section" id="searchSection">
+                <div class="search-card">
+                    <h2>What would you like to research?</h2>
+                    <p class="search-description">Enter any topic and our AI agents will search the web, analyze
+                        sources, and create a comprehensive report for you.</p>
+
+                    <form id="researchForm">
+                        <div class="input-group">
+                            <textarea id="queryInput"
+                                placeholder="e.g., What are the latest developments in quantum computing in 2024?"
+                                rows="3" required></textarea>
+                        </div>
+                        <button type="submit" class="btn-primary" id="submitBtn">
+                            <span class="btn-text">Start Research</span>
+                            <span class="btn-icon">→</span>
+                        </button>
+                    </form>
+
+                    <!-- Example Queries -->
+                    <div class="examples">
+                        <p class="examples-title">Try these examples:</p>
+                        <div class="example-chips">
+                            <button class="chip"
+                                onclick="setQuery('What are the latest breakthroughs in AI in 2024?')">AI Breakthroughs
+                                2024</button>
+                            <button class="chip"
+                                onclick="setQuery('How is climate change affecting global food security?')">Climate &
+                                Food Security</button>
+                            <button class="chip"
+                                onclick="setQuery('What are the emerging trends in renewable energy?')">Renewable Energy
+                                Trends</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading Section -->
+            <div class="loading-section hidden" id="loadingSection">
+                <div class="loading-card">
+                    <div class="spinner"></div>
+                    <h3>Researching your query...</h3>
+                    <p class="loading-text">Our AI agents are:</p>
+                    <ul class="loading-steps">
+                        <li>📋 Breaking down your question into research tasks</li>
+                        <li>🌐 Searching the web for relevant information</li>
+                        <li>🔍 Analyzing and synthesizing sources</li>
+                        <li>📝 Writing your comprehensive report</li>
+                    </ul>
+                    <p class="loading-note">This may take 30-60 seconds...</p>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section hidden" id="resultsSection">
+                <div class="results-header">
+                    <h2>Research Report</h2>
+                    <div class="results-actions">
+                        <button class="btn-secondary" onclick="copyReport()">📋 Copy</button>
+                        <button class="btn-secondary" onclick="downloadReport()">💾 Download</button>
+                        <button class="btn-secondary" onclick="newSearch()">🔍 New Search</button>
+                    </div>
+                </div>
+
+                <div class="query-display">
+                    <strong>Your Query:</strong>
+                    <p id="displayQuery"></p>
+                </div>
+
+                <div class="report-card" id="reportContent">
+                    <!-- Report will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Error Section -->
+            <div class="error-section hidden" id="errorSection">
+                <div class="error-card">
+                    <h3>⚠️ Oops! Something went wrong</h3>
+                    <p id="errorMessage"></p>
+                    <button class="btn-primary" onclick="newSearch()">Try Again</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Powered by Groq AI (Llama 3.3 70B) • Tavily Search API</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>
