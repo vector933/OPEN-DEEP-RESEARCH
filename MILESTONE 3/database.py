@@ -13,9 +13,15 @@ import os
 DB_PATH = "research_chats.db"
 
 
+def _get_connection():
+    """Get a database connection with foreign keys enabled."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("PRAGMA foreign_keys = ON")  # Enable foreign key constraints
+    return conn
+
 def init_db():
     """Initialize the database with required tables."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = _get_connection()
     cursor = conn.cursor()
     
     # Create chats table with local time
@@ -65,7 +71,7 @@ def init_db():
 
 def create_chat(title: str = "New Research") -> int:
     """Create a new chat session."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = _get_connection()
     cursor = conn.cursor()
     
     cursor.execute(
@@ -82,7 +88,7 @@ def create_chat(title: str = "New Research") -> int:
 
 def get_all_chats() -> List[Dict]:
     """Get all chat sessions."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = _get_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
@@ -100,7 +106,7 @@ def get_all_chats() -> List[Dict]:
 
 def get_chat(chat_id: int) -> Optional[Dict]:
     """Get a specific chat session."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = _get_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
@@ -118,7 +124,7 @@ def get_chat(chat_id: int) -> Optional[Dict]:
 
 def rename_chat(chat_id: int, new_title: str) -> bool:
     """Rename a chat session."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = _get_connection()
     cursor = conn.cursor()
     
     cursor.execute(
@@ -135,7 +141,7 @@ def rename_chat(chat_id: int, new_title: str) -> bool:
 
 def delete_chat(chat_id: int) -> bool:
     """Delete a chat session and all its messages."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = _get_connection()  # This will enable foreign keys
     cursor = conn.cursor()
     
     cursor.execute("DELETE FROM chats WHERE id = ?", (chat_id,))
@@ -149,7 +155,7 @@ def delete_chat(chat_id: int) -> bool:
 
 def add_message(chat_id: int, query: str, report: str) -> int:
     """Add a message to a chat session."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = _get_connection()
     cursor = conn.cursor()
     
     # Add message
@@ -174,7 +180,7 @@ def add_message(chat_id: int, query: str, report: str) -> int:
 
 def get_chat_messages(chat_id: int) -> List[Dict]:
     """Get all messages for a chat session."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = _get_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
@@ -208,7 +214,7 @@ def add_document(
     word_count: int
 ) -> int:
     """Add a document to a chat session."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = _get_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -232,7 +238,7 @@ def add_document(
 
 def get_chat_documents(chat_id: int) -> List[Dict]:
     """Get all documents for a chat session."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = _get_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
@@ -252,7 +258,7 @@ def get_chat_documents(chat_id: int) -> List[Dict]:
 
 def get_document(doc_id: int) -> Optional[Dict]:
     """Get a specific document."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = _get_connection()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
@@ -269,7 +275,7 @@ def get_document(doc_id: int) -> Optional[Dict]:
 
 def delete_document(doc_id: int) -> bool:
     """Delete a document."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = _get_connection()
     cursor = conn.cursor()
     
     # Get file path before deleting

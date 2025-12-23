@@ -13,12 +13,16 @@ import database as db
 import secrets
 import markdown
 from datetime import datetime
+from paper_fetcher import PaperFetcher
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(16)
+
+# Configuration for session continuity
+CONTEXT_WINDOW_SIZE = int(os.getenv("CONTEXT_WINDOW_SIZE", "5"))  # Number of previous messages to include as context
 
 # Initialize the LLM and orchestrator
 groq_api_key = os.getenv("GROQ_API_KEY")
@@ -31,6 +35,9 @@ llm = ChatGroq(
 
 # Use Academic Research Orchestrator
 orchestrator = AcademicResearchOrchestrator(llm)
+
+# Initialize Paper Fetcher for URL handling
+paper_fetcher = PaperFetcher()
 
 
 @app.route('/')
@@ -130,6 +137,46 @@ def delete_chat(chat_id):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/chat/<int:chat_id>/context', methods=['GET'])
+def get_conversation_context(chat_id):
+    """Get formatted conversation context for a chat session."""
+    try:
+        # Verify chat exists
+        chat = db.get_chat(chat_id)
+        if not chat:
+            return jsonify({'error': 'Chat not found'}), 404
+        
+        # Get messages
+        messages = db.get_chat_messages(chat_id)
+        
+        # Format the last N messages that would be used as context
+        context_messages = messages[-CONTEXT_WINDOW_SIZE:]
+        
+        # Create formatted context
+        formatted_context = []
+        for i, msg in enumerate(context_messages, 1):
+            formatted_context.append({
+                'index': i,
+                'query': msg['query'],
+                'report_preview': msg['report'][:200] + '...' if len(msg['report']) > 200 else msg['report'],
+                'created_at': msg.get('created_at', ''),
+                'message_id': msg.get('id')
+            })
+        
+        return jsonify({
+            'success': True,
+            'chat_id': chat_id,
+            'context_window_size': CONTEXT_WINDOW_SIZE,
+            'total_messages': len(messages),
+            'context_messages_count': len(context_messages),
+            'context': formatted_context,
+            'will_use_context': len(context_messages) > 0
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 # ============================================================================
 # RESEARCH ENDPOINT
 # ============================================================================
@@ -170,6 +217,148 @@ def research_in_chat(chat_id):
             return jsonify({
                 'error': 'Please enter a valid research question. Your input appears to be random characters.'
             }), 400
+        
+        # ============================================================
+        # CHECK FOR RESEARCH PAPER URL
+        # ============================================================
+        if paper_fetcher.detect_url(user_query):
+            print("🔗 Research paper URL detected!")
+            
+            try:
+                # Extract URL and any accompanying question
+                url, question = paper_fetcher.extract_url_and_question(user_query)
+                
+                if not url:
+                    return jsonify({'error': 'Could not extract URL from query'}), 400
+                
+                # Fetch paper information
+                print(f"📥 Fetching paper from: {url}")
+                paper_info = paper_fetcher.fetch_paper_info(url)
+                
+                # Determine if this is a summary request or a specific question
+                is_summary_request = question is None or len(question) < 10
+                
+                if is_summary_request:
+                    # Generate detailed summary
+                    print("📝 Generating detailed paper summary...")
+                    
+                    summary_prompt = f"""You are a research paper summarizer. Provide a comprehensive, well-structured summary of this research paper.
+
+**Paper Information:**
+- Title: {paper_info['title']}
+- Authors: {paper_info['authors']}
+- Source: {paper_info['source']}
+{f"- Published: {paper_info.get('published', 'Unknown')}" if 'published' in paper_info else ""}
+{f"- ArXiv ID: {paper_info.get('arxiv_id', '')}" if 'arxiv_id' in paper_info else ""}
+{f"- DOI: {paper_info.get('doi', '')}" if 'doi' in paper_info else ""}
+
+**Abstract:**
+{paper_info['abstract']}
+
+**Instructions:**
+Create a comprehensive summary with the following sections:
+
+1. **Overview**: Brief introduction to the paper
+2. **Research Problem**: What problem does this paper address?
+3. **Key Contributions**: Main contributions and findings
+4. **Methodology**: Research approach and methods used (infer from abstract if needed)
+5. **Significance**: Why is this research important?
+6. **Access**: Where to find the full paper
+
+Format your response in clear, professional markdown. Be thorough but concise."""
+
+                    response = llm.invoke(summary_prompt)
+                    final_report = response.content.strip()
+                    
+                    # Add paper metadata at the end
+                    final_report += f"\n\n## Paper Details\n\n"
+                    final_report += f"- **Title**: {paper_info['title']}\n"
+                    final_report += f"- **Authors**: {paper_info['authors']}\n"
+                    if 'published' in paper_info:
+                        final_report += f"- **Published**: {paper_info['published']}\n"
+                    if 'arxiv_id' in paper_info:
+                        final_report += f"- **ArXiv ID**: {paper_info['arxiv_id']}\n"
+                    if 'doi' in paper_info:
+                        final_report += f"- **DOI**: {paper_info['doi']}\n"
+                    if 'citations' in paper_info:
+                        final_report += f"- **Citations**: {paper_info['citations']}\n"
+                    final_report += f"- **URL**: {paper_info['url']}\n"
+                    if paper_info.get('pdf_url'):
+                        final_report += f"- **PDF**: {paper_info['pdf_url']}\n"
+                    
+                else:
+                    # Answer specific question about the paper
+                    print(f"❓ Answering question about paper: {question}")
+                    
+                    qa_prompt = f"""You are answering a specific question about a research paper.
+
+**Paper Information:**
+- Title: {paper_info['title']}
+- Authors: {paper_info['authors']}
+- Source: {paper_info['source']}
+
+**Abstract:**
+{paper_info['abstract']}
+
+**User Question:**
+{question}
+
+**Instructions:**
+- Answer the question based on the paper information provided
+- If the abstract doesn't contain enough information to fully answer, acknowledge this and provide what you can infer
+- Be specific and cite relevant parts of the abstract
+- If you cannot answer the question from the available information, say so clearly
+- Format your response in clear markdown
+
+**Response:**"""
+
+                    response = llm.invoke(qa_prompt)
+                    final_report = response.content.strip()
+                    
+                    # Add paper reference
+                    final_report += f"\n\n---\n\n**Paper Reference:**\n"
+                    final_report += f"- **Title**: {paper_info['title']}\n"
+                    final_report += f"- **Authors**: {paper_info['authors']}\n"
+                    final_report += f"- **URL**: {paper_info['url']}\n"
+                
+                # Save to database
+                db.add_message(chat_id, user_query, final_report)
+                
+                # Auto-rename chat if it's still "New Research"
+                if chat['title'] == 'New Research':
+                    # Use paper title (truncated)
+                    new_title = paper_info['title'][:60]
+                    if len(paper_info['title']) > 60:
+                        new_title += '...'
+                    db.rename_chat(chat_id, new_title)
+                
+                return jsonify({
+                    'success': True,
+                    'query': user_query,
+                    'report': final_report,
+                    'source': 'research_paper_url',
+                    'paper_info': {
+                        'title': paper_info['title'],
+                        'authors': paper_info['authors'],
+                        'url': paper_info['url']
+                    },
+                    'was_summary': is_summary_request
+                })
+                
+            except ValueError as e:
+                # URL detection succeeded but fetching failed
+                print(f"⚠️ Failed to fetch paper: {str(e)}")
+                return jsonify({
+                    'error': f'Could not fetch paper information: {str(e)}',
+                    'suggestion': 'Please check the URL or try searching for the paper by title instead.'
+                }), 400
+            except Exception as e:
+                print(f"❌ Error processing paper URL: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                return jsonify({
+                    'error': f'Error processing paper URL: {str(e)}'
+                }), 500
         
         # ============================================================
         # CHECK FOR UPLOADED DOCUMENTS FIRST
@@ -260,14 +449,22 @@ def research_in_chat(chat_id):
         # Get conversation history for context
         messages = db.get_chat_messages(chat_id)
         
-        # Format history for agents (limit to last 5 exchanges to avoid token limits)
+        # Format history for agents (use configurable context window)
         conversation_history = [
             {
                 'query': msg['query'],
-                'report': msg['report']
+                'report': msg['report'],
+                'created_at': msg.get('created_at', '')
             }
-            for msg in messages[-5:]  # Only last 5 exchanges
+            for msg in messages[-CONTEXT_WINDOW_SIZE:]  # Use configurable window size
         ]
+        
+        # Log context usage for debugging
+        if conversation_history:
+            print(f"📚 Using conversation context: {len(conversation_history)} previous message(s)")
+            print(f"   Last query in context: '{conversation_history[-1]['query'][:50]}...'")
+        else:
+            print("📝 Starting new conversation (no previous context)")
         
         # Perform research with academic papers AND conversation context
         final_report, papers = orchestrator.research(
@@ -293,6 +490,12 @@ def research_in_chat(chat_id):
             extensions=['tables', 'fenced_code', 'nl2br']
         )
         
+        # Estimate context token count (rough estimate: ~4 chars per token)
+        context_text = ""
+        for msg in conversation_history:
+            context_text += msg['query'] + " " + msg['report']
+        estimated_context_tokens = len(context_text) // 4
+        
         return jsonify({
             'success': True,
             'query': user_query,
@@ -300,7 +503,13 @@ def research_in_chat(chat_id):
             'html_report': html_report,
             'paper_count': len(papers),
             'source': 'academic_papers',
-            'conversation_context_used': len(conversation_history) > 0
+            'conversation_context_used': len(conversation_history) > 0,
+            'context_metadata': {
+                'messages_used': len(conversation_history),
+                'total_messages_in_chat': len(messages),
+                'context_window_size': CONTEXT_WINDOW_SIZE,
+                'estimated_context_tokens': estimated_context_tokens
+            }
         })
         
     except Exception as e:
